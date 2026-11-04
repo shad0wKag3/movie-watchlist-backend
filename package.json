@@ -12,7 +12,8 @@
     "prisma:seed": "node prisma/seed.js",
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --runInBand --detectOpenHandles --forceExit",
     "test:unit": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/unit --runInBand",
-    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --runInBand"
+    "test:integration": "cross-env NODE_OPTIONS=--experimental-vm-modules jest tests/integration --runInBand",
+    "db:clean-users": "node scripts/clean-users.js"
   },
   "keywords": [
     "gdgoc",

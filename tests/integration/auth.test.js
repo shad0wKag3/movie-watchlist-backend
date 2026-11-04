@@ -4,6 +4,9 @@ import bcrypt from 'bcryptjs';
 import { app } from '../../src/app.js';
 import { prisma } from '../../src/prisma.js';
 
+// Compliant password satisfying the complex policy (uppercase, lowercase, digit, special char)
+const VALID_PASSWORD = 'StrongPass1!';
+
 describe('Integration - Auth Endpoints (/api/auth)', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -22,7 +25,7 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
 
       const res = await request(app).post('/api/auth/register').send({
         email: 'developer@gdgoc.dev',
-        password: 'password123',
+        password: VALID_PASSWORD,
         name: 'Developer Test',
       });
 
@@ -36,7 +39,7 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
     it('should return 400 Bad Request when validation fails (invalid email & short password)', async () => {
       const res = await request(app).post('/api/auth/register').send({
         email: 'not-an-email',
-        password: '123', // < 6 chars
+        password: '123', // < 6 chars, no complexity
         name: 'A', // < 2 chars
       });
 
@@ -45,6 +48,44 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
       expect(res.body.message).toBe('Validation failed');
       expect(res.body.errors).toBeDefined();
       expect(Array.isArray(res.body.errors)).toBe(true);
+    });
+
+    it('should return 400 Bad Request when password lacks uppercase letter', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@gdgoc.dev',
+        password: 'nouppercase1!', // no uppercase
+        name: 'Test User',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.status).toBe('fail');
+      expect(res.body.message).toBe('Validation failed');
+      expect(res.body.errors.some((e) => e.field === 'password')).toBe(true);
+      expect(res.body.errors[0].message).toMatch(/uppercase/i);
+    });
+
+    it('should return 400 Bad Request when password lacks a digit', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@gdgoc.dev',
+        password: 'NoDigitHere!', // no number
+        name: 'Test User',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.status).toBe('fail');
+      expect(res.body.errors.some((e) => e.field === 'password')).toBe(true);
+    });
+
+    it('should return 400 Bad Request when password lacks a special character', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'test@gdgoc.dev',
+        password: 'NoSpecial123', // no special char
+        name: 'Test User',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.status).toBe('fail');
+      expect(res.body.errors.some((e) => e.field === 'password')).toBe(true);
     });
 
     it('should return 201 Created when payload uses "username" instead of "name"', async () => {
@@ -59,7 +100,7 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
 
       const res = await request(app).post('/api/auth/register').send({
         email: 'newuser@gdgoc.dev',
-        password: 'password123',
+        password: VALID_PASSWORD,
         username: 'NewUser',
       });
 
@@ -71,7 +112,7 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
     it('should return 400 Bad Request when both "name" and "username" are missing', async () => {
       const res = await request(app).post('/api/auth/register').send({
         email: 'noname@gdgoc.dev',
-        password: 'password123',
+        password: VALID_PASSWORD,
       });
 
       expect(res.status).toBe(400);
@@ -87,7 +128,7 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
 
       const res = await request(app).post('/api/auth/register').send({
         email: 'existing@gdgoc.dev',
-        password: 'password123',
+        password: VALID_PASSWORD,
         name: 'Existing User',
       });
 
@@ -111,7 +152,7 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
 
       const res = await request(app).post('/api/auth/login').send({
         email: 'developer@gdgoc.dev',
-        password: 'password123',
+        password: VALID_PASSWORD,
       });
 
       expect(res.status).toBe(200);
@@ -141,4 +182,3 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
     });
   });
 });
-
