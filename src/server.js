@@ -4,9 +4,9 @@ import { env } from './config/env.js';
 const PORT = env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 GDGoC Movie Watchlist Server listening on port ${PORT}`);
-  console.log(`👉 Environment: ${env.NODE_ENV}`);
-  console.log(`👉 Health check: http://localhost:${PORT}/api/health`);
+  console.log(` GDGoC Movie Watchlist Server listening on port ${PORT}`);
+  console.log(` Environment: ${env.NODE_ENV}`);
+  console.log(` Health check: http://localhost:${PORT}/api/health`);
 });
 
 // Graceful shutdown
