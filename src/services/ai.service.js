@@ -67,16 +67,35 @@ ${JSON.stringify(catalogRepresentation, null, 2)}
   let parsedRecommendation;
   try {
     const ai = geminiProvider.getClient();
+    const primaryModel = env.GEMINI_MODEL || 'gemini-2.5-flash';
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `User mood/preference: "${userPrompt.trim()}". Recommend the single best movie from the candidate catalog.`,
-      config: {
-        systemInstruction,
-        temperature: 0.3,
-        responseMimeType: 'application/json',
-      },
-    });
+    let response;
+    try {
+      response = await ai.models.generateContent({
+        model: primaryModel,
+        contents: `User mood/preference: "${userPrompt.trim()}". Recommend the single best movie from the candidate catalog.`,
+        config: {
+          systemInstruction,
+          temperature: 0.3,
+          responseMimeType: 'application/json',
+        },
+      });
+    } catch (apiErr) {
+      // If gemini-2.5-flash returns 404 or deprecation to gemini-3.8-flash, try fallback model
+      if (apiErr.message && (apiErr.message.includes('gemini-3.8-flash') || apiErr.message.includes('404'))) {
+        response = await ai.models.generateContent({
+          model: 'gemini-3.8-flash',
+          contents: `User mood/preference: "${userPrompt.trim()}". Recommend the single best movie from the candidate catalog.`,
+          config: {
+            systemInstruction,
+            temperature: 0.3,
+            responseMimeType: 'application/json',
+          },
+        });
+      } else {
+        throw apiErr;
+      }
+    }
 
     const rawText =
       typeof response.text === 'function'
