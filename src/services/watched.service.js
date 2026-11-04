@@ -1,6 +1,15 @@
 import { prisma } from '../prisma.js';
 import { AppError } from '../errors/appError.js';
 
+// Helper untuk memastikan objek yang dikirim ke frontend memiliki reviewText dan review_text
+const formatWatchedItem = (item) => {
+  if (!item) return item;
+  return {
+    ...item,
+    reviewText: item.review_text, // Alias untuk komponen UI Frontend
+  };
+};
+
 export const getWatchedHistory = async (userId) => {
   const items = await prisma.watched.findMany({
     where: { user_id: userId },
@@ -10,7 +19,7 @@ export const getWatchedHistory = async (userId) => {
     orderBy: { watched_at: 'desc' },
   });
 
-  return items;
+  return items.map(formatWatchedItem);
 };
 
 export const addWatchedMovie = async (userId, body) => {
@@ -45,7 +54,7 @@ export const addWatchedMovie = async (userId, body) => {
       },
     });
 
-    return entry;
+    return formatWatchedItem(entry);
   } catch (error) {
     if (error.code === 'P2002') {
       throw AppError.conflict('Movie has already been logged in your watched list');
