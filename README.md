@@ -6,7 +6,7 @@ Designed following a strict Layered Architecture and configured for seamless dep
 
 ---
 
-##  Architecture & Project Structure
+## Architecture & Project Structure
 
 The project implements a strict Layered Architecture:
 ```
@@ -78,7 +78,7 @@ Movie-watchlist-backend/
 
 ---
 
-##  Database Schema (`prisma/schema.prisma`)
+## Database Schema (`prisma/schema.prisma`)
 
 - **User**: ID (UUID), email (unique), password_hash, name, created_at.
 - **Movie**: ID (Autoincrement Int), title, overview, release_year, genres (`String[]`), poster_url, rating, duration, created_at.
@@ -87,7 +87,7 @@ Movie-watchlist-backend/
 
 ---
 
-## 🚀 API Endpoints (10 Endpoints under `/api`)
+## API Endpoints (10 Endpoints under `/api`)
 
 ### 1. Authentication
 - `POST /api/auth/register` (Public)
@@ -131,7 +131,7 @@ Movie-watchlist-backend/
 
 ---
 
-##  Google Gemini AI Grounding Engine
+## Google Gemini AI Grounding Engine
 
 The `/api/movies/recommend` endpoint implements strict in-context grounding:
 1. Fetches candidate movies dynamically from PostgreSQL via Prisma.
@@ -144,7 +144,7 @@ The `/api/movies/recommend` endpoint implements strict in-context grounding:
 
 ---
 
-##  Setup & Running
+## Setup & Running
 
 ### 1. Install Dependencies
 ```bash
@@ -176,17 +176,3 @@ npm test
 ```bash
 npm run dev
 ```
-
----
-
-##  Deployment to Vercel
-
-1. Push your repository to GitHub.
-2. Import repository in [Vercel](https://vercel.com).
-3. Set the following Environment Variables in the Vercel project settings:
-   - `DATABASE_URL`
-   - `DIRECT_URL`
-   - `JWT_SECRET`
-   - `GEMINI_API_KEY`
-4. Deploy! The included `vercel.json` and `api/index.js` handle serverless routing automatically.
-
