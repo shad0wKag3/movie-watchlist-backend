@@ -4,7 +4,9 @@ import { prisma } from '../prisma.js';
 import { env } from '../config/env.js';
 import { AppError } from '../errors/appError.js';
 
-export const registerUser = async ({ email, password, name }) => {
+export const registerUser = async ({ email, password, name, username }) => {
+  // Accept either 'name' or 'username' from the request body
+  const resolvedName = (name || username || '').trim();
   const normalizedEmail = email.toLowerCase().trim();
 
   // Check if user already exists
@@ -24,7 +26,7 @@ export const registerUser = async ({ email, password, name }) => {
     data: {
       email: normalizedEmail,
       password_hash,
-      name: name.trim(),
+      name: resolvedName,
     },
     select: {
       id: true,

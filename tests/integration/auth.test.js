@@ -47,6 +47,38 @@ describe('Integration - Auth Endpoints (/api/auth)', () => {
       expect(Array.isArray(res.body.errors)).toBe(true);
     });
 
+    it('should return 201 Created when payload uses "username" instead of "name"', async () => {
+      jest.spyOn(prisma.user, 'findUnique').mockResolvedValue(null);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('hashed_secret');
+      jest.spyOn(prisma.user, 'create').mockResolvedValue({
+        id: 'user-uuid-2',
+        email: 'newuser@gdgoc.dev',
+        name: 'NewUser',
+        created_at: new Date('2026-01-01T00:00:00Z'),
+      });
+
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'newuser@gdgoc.dev',
+        password: 'password123',
+        username: 'NewUser',
+      });
+
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data.user.email).toBe('newuser@gdgoc.dev');
+    });
+
+    it('should return 400 Bad Request when both "name" and "username" are missing', async () => {
+      const res = await request(app).post('/api/auth/register').send({
+        email: 'noname@gdgoc.dev',
+        password: 'password123',
+      });
+
+      expect(res.status).toBe(400);
+      expect(res.body.status).toBe('fail');
+      expect(res.body.message).toBe('Validation failed');
+    });
+
     it('should return 409 Conflict when registering with already existing email', async () => {
       jest.spyOn(prisma.user, 'findUnique').mockResolvedValue({
         id: 'existing-id',
