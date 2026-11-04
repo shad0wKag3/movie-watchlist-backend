@@ -1,12 +1,18 @@
 import { prisma } from '../prisma.js';
 import { AppError } from '../errors/appError.js';
 
-// Helper untuk memastikan objek yang dikirim ke frontend memiliki reviewText dan review_text
+// Format item watched agar memiliki properti `review` & `opinion` sesuai kebutuhan frontend (app.js)
 const formatWatchedItem = (item) => {
   if (!item) return item;
+  
+  const textContent = item.review_text || item.reviewText || item.review || item.opinion || item.comment || '';
+
   return {
     ...item,
-    reviewText: item.review_text, // Alias untuk komponen UI Frontend
+    review_text: textContent,
+    reviewText: textContent,
+    review: textContent,
+    opinion: textContent,
   };
 };
 
@@ -26,7 +32,7 @@ export const addWatchedMovie = async (userId, body) => {
   const { movieId, rating } = body;
   const numericMovieId = Number(movieId);
 
-  const rawReviewText = body.reviewText ?? body.review_text ?? body.review ?? body.comment ?? '';
+  const rawReviewText = body.reviewText ?? body.review_text ?? body.review ?? body.opinion ?? body.comment ?? '';
 
   if (!rawReviewText || typeof rawReviewText !== 'string' || rawReviewText.trim() === '') {
     throw AppError.badRequest('reviewText or review_text is required');
