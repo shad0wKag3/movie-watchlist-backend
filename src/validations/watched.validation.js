@@ -2,23 +2,32 @@ import { z } from 'zod';
 
 export const addWatchedSchema = z
   .object({
-    movieId: z.number().int().positive().optional(),
-    movie_id: z.number().int().positive().optional(),
-    rating: z.number().int().min(1, 'Rating must be at least 1').max(5, 'Rating cannot exceed 5'),
-    reviewText: z.string().trim().min(1, 'Review text is required').optional(),
-    review_text: z.string().trim().min(1, 'Review text is required').optional(),
+    movieId: z.union([z.number(), z.string()]),
+    rating: z.union([z.number(), z.string()]).transform((val) => Number(val)),
+    reviewText: z.string().optional(),
+    review_text: z.string().optional(),
+    review: z.string().optional(),
+    comment: z.string().optional(),
   })
-  .refine((data) => data.movieId !== undefined || data.movie_id !== undefined, {
-    message: 'movieId or movie_id is required',
-    path: ['movieId'],
-  })
-  .refine((data) => Boolean(data.reviewText || data.review_text), {
-    message: 'reviewText or review_text is required',
-    path: ['reviewText'],
-  })
-  .transform((data) => ({
-    movieId: data.movieId ?? data.movie_id,
-    rating: data.rating,
-    reviewText: data.reviewText ?? data.review_text,
-  }));
+  .transform((data, ctx) => {
+    const text = data.reviewText ?? data.review_text ?? data.review ?? data.comment;
 
+    if (!text || typeof text !== 'string' || text.trim() === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'reviewText or review_text is required',
+        path: ['reviewText'],
+      });
+      return z.NEVER;
+    }
+
+    return {
+      movieId: Number(data.movieId),
+      rating: data.rating,
+      reviewText: text.trim(),
+    };
+  });
+
+export default {
+  addWatchedSchema,
+};
