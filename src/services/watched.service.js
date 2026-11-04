@@ -1,20 +1,13 @@
-import { prisma } from '../prisma.js';
-import { AppError } from '../errors/appError.js';
-
-export const getWatchedHistory = async (userId) => {
-  const items = await prisma.watched.findMany({
-    where: { user_id: userId },
-    include: {
-      movie: true,
-    },
-    orderBy: { watched_at: 'desc' },
-  });
-
-  return items;
-};
-
-export const addWatchedMovie = async (userId, { movieId, rating, reviewText }) => {
+export const addWatchedMovie = async (userId, body) => {
+  const { movieId, rating } = body;
   const numericMovieId = Number(movieId);
+
+  // Fallback untuk mengekstrak teks review dari berbagai nama property yang mungkin dikirim frontend
+  const rawReviewText = body.reviewText ?? body.review_text ?? body.review ?? body.comment ?? '';
+
+  if (!rawReviewText || typeof rawReviewText !== 'string' || rawReviewText.trim() === '') {
+    throw AppError.badRequest('reviewText or review_text is required');
+  }
 
   // Verify movie exists
   const movie = await prisma.movie.findUnique({
@@ -31,7 +24,7 @@ export const addWatchedMovie = async (userId, { movieId, rating, reviewText }) =
         user_id: userId,
         movie_id: numericMovieId,
         rating: Number(rating),
-        review_text: reviewText.trim(),
+        review_text: rawReviewText.trim(),
       },
       include: {
         movie: true,
@@ -46,9 +39,3 @@ export const addWatchedMovie = async (userId, { movieId, rating, reviewText }) =
     throw error;
   }
 };
-
-export default {
-  getWatchedHistory,
-  addWatchedMovie,
-};
-
