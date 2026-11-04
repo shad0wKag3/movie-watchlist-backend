@@ -3,9 +3,7 @@ import { AppError } from '../errors/appError.js';
 
 /**
  * Middleware factory to validate request parts (body, query, params) against Zod schemas.
- * On failure, returns a 400 response with:
- *   - message: 'Validation failed'
- *   - errors: Array of { field, message } objects so the frontend can render per-field hints
+ * On failure, returns a 400 response with detailed error messages concatenated into message string.
  * @param {import('zod').ZodTypeAny} schema
  * @param {'body' | 'query' | 'params'} source
  */
@@ -19,7 +17,6 @@ export const validate = (schema, source = 'body') => {
     } catch (error) {
       if (error instanceof ZodError) {
         // Deduplicate errors per field — keep the first message per path to avoid repetition
-        // from chained .regex() calls on the same field
         const seen = new Set();
         const errors = [];
         for (const err of error.errors) {
@@ -29,7 +26,11 @@ export const validate = (schema, source = 'body') => {
             errors.push({ field, message: err.message });
           }
         }
-        return next(new AppError(400, 'Validation failed', errors));
+
+        // Combine all specific error messages into a single main message string for the Frontend
+        const detailedMessage = errors.map((e) => e.message).join('. ');
+
+        return next(new AppError(400, detailedMessage || 'Validation failed', errors));
       }
       next(error);
     }
@@ -37,4 +38,3 @@ export const validate = (schema, source = 'body') => {
 };
 
 export default validate;
-
