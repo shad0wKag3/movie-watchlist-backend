@@ -16,10 +16,19 @@ export const geminiProvider = {
 };
 
 /**
+ * Helper function to detect 503 / High Demand errors from Gemini API
+ */
+const isServerOverloadedError = (err) => {
+  const errMsg = err?.message || '';
+  const errStatus = err?.status || err?.statusCode || 0;
+  return errStatus === 503 || errMsg.includes('503') || errMsg.includes('UNAVAILABLE') || errMsg.includes('high demand');
+};
+
+/**
  * Recommends a movie based on user mood or preference prompt
- * using Gemini 2.5 Flash and in-context grounding against the local movie catalog.
+ * using Gemini and in-context grounding against the local movie catalog.
  *
- * @param {string} userPrompt - User mood or movie description
+ * @param {string} userPrompt User mood or movie description
  * @returns {Promise<{ movie: object, reasoning: string }>}
  */
 export const getMovieRecommendation = async (userPrompt) => {
@@ -63,36 +72,42 @@ CANDIDATE CATALOG:
 ${JSON.stringify(catalogRepresentation, null, 2)}
 `.trim();
 
-  // 3. Call Google Gemini API (@google/genai) using model 'gemini-2.5-flash'
+  // 3. Call Google Gemini API (@google/genai) with fallback models and retry support
   let parsedRecommendation;
   try {
     const ai = geminiProvider.getClient();
     const primaryModel = env.GEMINI_MODEL || 'gemini-2.5-flash';
+    const fallbackModels = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+
+    const generatePayload = (modelName) => ({
+      model: modelName,
+      contents: `User mood/preference: "${userPrompt.trim()}". Recommend the single best movie from the candidate catalog.`,
+      config: {
+        systemInstruction,
+        temperature: 0.3,
+        responseMimeType: 'application/json',
+      },
+    });
 
     let response;
     try {
-      response = await ai.models.generateContent({
-        model: primaryModel,
-        contents: `User mood/preference: "${userPrompt.trim()}". Recommend the single best movie from the candidate catalog.`,
-        config: {
-          systemInstruction,
-          temperature: 0.3,
-          responseMimeType: 'application/json',
-        },
-      });
+      response = await ai.models.generateContent(generatePayload(primaryModel));
     } catch (apiErr) {
-      // If gemini-2.5-flash returns 404 or deprecation to gemini-3.8-flash, try fallback model
-      if (apiErr.message && (apiErr.message.includes('gemini-3.8-flash') || apiErr.message.includes('404'))) {
-        response = await ai.models.generateContent({
-          model: 'gemini-3.8-flash',
-          contents: `User mood/preference: "${userPrompt.trim()}". Recommend the single best movie from the candidate catalog.`,
-          config: {
-            systemInstruction,
-            temperature: 0.3,
-            responseMimeType: 'application/json',
-          },
-        });
-      } else {
+      console.warn(`Primary model ${primaryModel} failed: ${apiErr.message}. Attempting fallbacks...`);
+
+      let fallbackSuccess = false;
+      for (const fallbackModel of fallbackModels) {
+        if (fallbackModel === primaryModel) continue;
+        try {
+          response = await ai.models.generateContent(generatePayload(fallbackModel));
+          fallbackSuccess = true;
+          break;
+        } catch (fallbackErr) {
+          console.warn(`Fallback model ${fallbackModel} also failed: ${fallbackErr.message}`);
+        }
+      }
+
+      if (!fallbackSuccess) {
         throw apiErr;
       }
     }
@@ -108,6 +123,11 @@ ${JSON.stringify(catalogRepresentation, null, 2)}
   } catch (err) {
     if (err instanceof AppError) throw err;
     console.error('Gemini API recommendation error:', err);
+
+    if (isServerOverloadedError(err)) {
+      throw new AppError(503, 'AI recommendation service is currently experiencing high demand. Please try again in a few seconds.');
+    }
+
     throw AppError.internal(`AI recommendation failed: ${err.message}`);
   }
 
