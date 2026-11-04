@@ -1,3 +1,4 @@
+import { ZodError } from 'zod';
 import { AppError } from '../errors/appError.js';
 import { env } from '../config/env.js';
 
@@ -6,8 +7,19 @@ export const errorHandler = (err, req, res, next) => {
   let message = err.message || 'Internal server error';
   let errors = err.errors || null;
 
+  // Handle Zod Validation Errors
+  if (err instanceof ZodError) {
+    statusCode = 400;
+    const errorMessages = err.issues.map((issue) => issue.message);
+    message = errorMessages.join('. ') || 'Validation failed';
+    
+    errors = err.issues.map((issue) => ({
+      field: issue.path.join('.'),
+      message: issue.message,
+    }));
+  }
   // Handle Prisma Known Request Errors
-  if (err.code) {
+  else if (err.code) {
     switch (err.code) {
       case 'P2002': {
         statusCode = 409;
@@ -66,4 +78,3 @@ export const errorHandler = (err, req, res, next) => {
 };
 
 export default errorHandler;
-
