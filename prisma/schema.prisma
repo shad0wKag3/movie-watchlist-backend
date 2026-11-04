@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String      @id @default(uuid())
+  email         String      @unique
+  password_hash String
+  name          String
+  created_at    DateTime    @default(now())
+  watchlists    Watchlist[]
+  watcheds      Watched[]
+
+  @@map("users")
+}
+
+model Movie {
+  id           Int         @id @default(autoincrement())
+  title        String
+  overview     String
+  release_year Int
+  genres       String[]
+  poster_url   String?
+  rating       Float?      @default(0)
+  duration     String?
+  created_at   DateTime    @default(now())
+  watchlists   Watchlist[]
+  watcheds     Watched[]
+
+  @@map("movies")
+}
+
+model Watchlist {
+  id         String   @id @default(uuid())
+  user_id    String
+  movie_id   Int
+  created_at DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movie_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, movie_id])
+  @@map("watchlists")
+}
+
+model Watched {
+  id          String   @id @default(uuid())
+  user_id     String
+  movie_id    Int
+  rating      Int
+  review_text String
+  watched_at  DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  movie Movie @relation(fields: [movie_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, movie_id])
+  @@map("watcheds")
+}
+
