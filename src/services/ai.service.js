@@ -15,7 +15,12 @@ export const geminiProvider = {
 const isServerOverloadedError = (err) => {
   const errMsg = err?.message || '';
   const errStatus = err?.status || err?.statusCode || 0;
-  return errStatus === 503 || errMsg.includes('503') || errMsg.includes('UNAVAILABLE') || errMsg.includes('high demand');
+  return (
+    errStatus === 503 ||
+    errMsg.includes('503') ||
+    errMsg.includes('UNAVAILABLE') ||
+    errMsg.includes('high demand')
+  );
 };
 
 export const getMovieRecommendation = async (userPrompt) => {
@@ -58,16 +63,16 @@ CANDIDATE CATALOG:
 ${JSON.stringify(catalogRepresentation, null, 2)}
 `.trim();
 
-  // 3. Call Gemini API using gemini-3.8-flash
+  // 3. Call Gemini API using gemini-3.6-flash as primary and gemini-3.5-flash-lite as fallback
   let parsedRecommendation;
   try {
     const ai = geminiProvider.getClient();
 
-    // Gunakan gemini-3.8-flash sebagai model utama sesuai arahan API
+    // Use strictly two models: gemini-3.6-flash as primary and gemini-3.5-flash-lite as fallback
     const modelsToTry = [
-      env.GEMINI_MODEL,
-      'gemini-3.8-flash',
-    ].filter(Boolean);
+      'gemini-3.6-flash',
+      'gemini-3.5-flash-lite',
+    ];
 
     let response = null;
     let lastError = null;
@@ -113,7 +118,9 @@ ${JSON.stringify(catalogRepresentation, null, 2)}
   }
 
   // 4. Defensive matching against catalog
-  const targetId = Number(parsedRecommendation?.movieId || parsedRecommendation?.id || parsedRecommendation?.movie_id);
+  const targetId = Number(
+    parsedRecommendation?.movieId || parsedRecommendation?.id || parsedRecommendation?.movie_id
+  );
   let matchedMovie = candidateMovies.find((m) => m.id === targetId);
   let reasoning = parsedRecommendation?.reasoning;
 
